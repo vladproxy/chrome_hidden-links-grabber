@@ -1,9 +1,10 @@
-const scanBtn    = document.getElementById('scan-btn');
-const statusEl   = document.getElementById('status');
-const countEl    = document.getElementById('count');
-const copyAllBtn = document.getElementById('copy-all-btn');
-const resultsEl  = document.getElementById('results');
-const emptyEl    = document.getElementById('empty');
+const scanBtn        = document.getElementById('scan-btn');
+const statusEl       = document.getElementById('status');
+const countEl        = document.getElementById('count');
+const copyAllBtn     = document.getElementById('copy-all-btn');
+const resultsEl      = document.getElementById('results');
+const emptyEl        = document.getElementById('empty');
+const thresholdInput = document.getElementById('threshold-input');
 
 // Holds the last scan results so Copy All always has access to them
 let lastLinks = [];
@@ -122,7 +123,8 @@ async function scan() {
       files: ['content.js']
     });
 
-    const response = await chrome.tabs.sendMessage(tab.id, { action: 'scan' });
+    const threshold = Math.max(0, parseInt(thresholdInput.value, 10) || 0);
+    const response = await chrome.tabs.sendMessage(tab.id, { action: 'scan', threshold });
 
     if (!response || !Array.isArray(response.links)) {
       setStatus('Unexpected response from page.', 'error');

@@ -44,6 +44,34 @@
       letter-spacing: 0.01em;
     }
 
+    .threshold-field {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      flex-shrink: 0;
+    }
+    .threshold-field label {
+      font-size: 11px;
+      color: #8b99b5;
+      white-space: nowrap;
+    }
+    .threshold-field input {
+      width: 54px;
+      background: #0f1117;
+      color: #e2e8f0;
+      border: 1px solid #2d3a55;
+      border-radius: 5px;
+      padding: 3px 6px;
+      font-size: 12px;
+      text-align: right;
+      outline: none;
+    }
+    .threshold-field input:focus { border-color: #3b6ef7; }
+    .threshold-field span {
+      font-size: 11px;
+      color: #8b99b5;
+    }
+
     #scan-btn {
       background: #3b6ef7;
       color: #fff;
@@ -203,6 +231,11 @@
       <circle cx="18" cy="12" r="1.5" fill="#f87171"/>
     </svg>
     <h1>Hidden Links Grabber</h1>
+    <div class="threshold-field">
+      <label for="threshold-input">Threshold</label>
+      <input type="number" id="threshold-input" value="50" min="0" max="99999" step="1" />
+      <span>px</span>
+    </div>
     <button id="scan-btn">Scan Page</button>
   </header>
 
