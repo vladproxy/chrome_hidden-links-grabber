@@ -1,24 +1,40 @@
 const scanBtn    = document.getElementById('scan-btn');
 const statusEl   = document.getElementById('status');
 const countEl    = document.getElementById('count');
+const copyAllBtn = document.getElementById('copy-all-btn');
 const resultsEl  = document.getElementById('results');
 const emptyEl    = document.getElementById('empty');
+
+// Holds the last scan results so Copy All always has access to them
+let lastLinks = [];
 
 function setStatus(msg, type = '') {
   statusEl.textContent = msg;
   statusEl.className = 'status' + (type ? ' ' + type : '');
 }
 
+function copyAllToClipboard() {
+  if (!lastLinks.length) return;
+  const text = lastLinks.map(l => l.href).join('\n');
+  navigator.clipboard.writeText(text).then(() => {
+    copyAllBtn.textContent = 'Copied!';
+    setTimeout(() => { copyAllBtn.textContent = 'Copy All'; }, 1500);
+  });
+}
+
 function renderResults(links) {
+  lastLinks = links;
   resultsEl.innerHTML = '';
 
   if (!links.length) {
     countEl.textContent = '';
+    copyAllBtn.hidden = true;
     emptyEl.hidden = false;
     return;
   }
 
   emptyEl.hidden = true;
+  copyAllBtn.hidden = false;
   countEl.textContent = `${links.length} hidden link${links.length !== 1 ? 's' : ''} found`;
 
   links.forEach(link => {
@@ -88,6 +104,7 @@ async function scan() {
   scanBtn.textContent = 'Scanning…';
   setStatus('Injecting scanner…');
   countEl.textContent = '';
+  copyAllBtn.hidden = true;
   resultsEl.innerHTML = '';
   emptyEl.hidden = true;
 
@@ -135,6 +152,7 @@ async function scan() {
 }
 
 scanBtn.addEventListener('click', scan);
+copyAllBtn.addEventListener('click', copyAllToClipboard);
 
 // Auto-scan when popup opens
 scan();

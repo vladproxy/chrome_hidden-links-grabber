@@ -85,6 +85,21 @@
       color: #f59e0b;
     }
 
+    #copy-all-btn {
+      background: #1a2e1a;
+      color: #4ade80;
+      border: 1px solid #166534;
+      border-radius: 5px;
+      padding: 3px 10px;
+      font-size: 11px;
+      font-weight: 600;
+      cursor: pointer;
+      flex-shrink: 0;
+      transition: background 0.1s, color 0.1s;
+    }
+    #copy-all-btn:hover { background: #166534; color: #bbf7d0; }
+    #copy-all-btn[hidden] { display: none; }
+
     /* ── Results ── */
     #results {
       overflow-y: auto;
@@ -194,6 +209,7 @@
   <div class="info-bar">
     <span class="status" id="status">Ready — click Scan Page to begin.</span>
     <span id="count"></span>
+    <button id="copy-all-btn" hidden>Copy All</button>
   </div>
 
   <div id="results"></div>
