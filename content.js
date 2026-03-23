@@ -1,0 +1,146 @@
+/**
+ * Scans the current page for links hidden via position:absolute/fixed
+ * with CSS offsets that place them (or an ancestor) outside the viewport.
+ *
+ * Detection strategy:
+ *   1. getBoundingClientRect() is the ground truth — if a link's rect is
+ *      entirely outside the viewport, it is hidden regardless of the specific
+ *      pixel value used.
+ *   2. We then walk up the DOM to find which element carries the
+ *      position + offset rule, and report the exact CSS responsible.
+ */
+function findHiddenLinks() {
+  const vw = window.innerWidth  || document.documentElement.clientWidth;
+  const vh = window.innerHeight || document.documentElement.clientHeight;
+
+  /** True when the rect lies completely outside the viewport in any direction. */
+  function isOffViewport(rect) {
+    return (
+      rect.right  <= 0  ||   // entirely to the left
+      rect.bottom <= 0  ||   // entirely above
+      rect.left   >= vw ||   // entirely to the right
+      rect.top    >= vh      // entirely below
+    );
+  }
+
+  /**
+   * Which direction is the element hidden in?
+   * Used to pick the most relevant CSS property for the reason string.
+   */
+  function hiddenDirection(rect) {
+    if (rect.right  <= 0)  return 'left';
+    if (rect.bottom <= 0)  return 'top';
+    if (rect.left   >= vw) return 'right';
+    if (rect.top    >= vh) return 'bottom';
+    return null;
+  }
+
+  /**
+   * If `el` uses position:absolute/fixed with at least one explicit offset,
+   * returns { pos, offsets }; otherwise returns null.
+   */
+  function getPositionData(el) {
+    const style = window.getComputedStyle(el);
+    const pos   = style.position;
+    if (pos !== 'absolute' && pos !== 'fixed') return null;
+
+    const offsets = {
+      left:   style.left,
+      top:    style.top,
+      right:  style.right,
+      bottom: style.bottom,
+    };
+
+    // Must have at least one non-auto offset — otherwise nothing moved it
+    if (Object.values(offsets).every(v => v === 'auto')) return null;
+
+    return { pos, offsets };
+  }
+
+  /**
+   * Builds a human-readable reason string, preferring the offset in `dir`.
+   */
+  function buildReason(posData, dir) {
+    const { pos, offsets } = posData;
+    if (dir && offsets[dir] !== 'auto') return `position:${pos}; ${dir}:${offsets[dir]}`;
+    // Fallback: first explicit offset
+    for (const [k, v] of Object.entries(offsets)) {
+      if (v !== 'auto') return `position:${pos}; ${k}:${v}`;
+    }
+    return `position:${pos}`;
+  }
+
+  /**
+   * Walks from `link` up to <html> to find the element that carries
+   * the position+offset rule responsible for hiding.
+   * Returns { posData, source } or null if none found.
+   */
+  function findResponsibleAncestor(link) {
+    // Check the link itself first
+    const selfData = getPositionData(link);
+    if (selfData) return { posData: selfData, source: 'self' };
+
+    // Walk up
+    let node = link.parentElement;
+    while (node && node !== document.documentElement) {
+      const data = getPositionData(node);
+      if (data) {
+        const tag = node.tagName.toLowerCase();
+        const id  = node.id ? `#${node.id}` : '';
+        const cls = node.className && typeof node.className === 'string'
+          ? node.className.trim().split(/\s+/).map(c => `.${c}`).join('').slice(0, 30)
+          : '';
+        return { posData: data, source: `ancestor <${tag}${id}${cls}>` };
+      }
+      node = node.parentElement;
+    }
+    return null;
+  }
+
+  const seen    = new Set();
+  const results = [];
+
+  document.querySelectorAll('a[href]').forEach(link => {
+    const href = link.href;
+    // Skip empty, same-page anchors, and javascript: URIs
+    if (!href || href === location.href + '#' || /^javascript:/i.test(href)) return;
+
+    // ── Step 1: is the link actually off-screen? ──────────────────────────
+    // getClientRects() returns an empty list for display:none elements,
+    // so we can rule those out cheaply before getBoundingClientRect.
+    if (link.getClientRects().length === 0) return;
+
+    const rect = link.getBoundingClientRect();
+    if (!isOffViewport(rect)) return;
+
+    // ── Step 2: is the cause a position:absolute/fixed offset? ───────────
+    const hiding = findResponsibleAncestor(link);
+    if (!hiding) return;   // off-screen for another reason (e.g. overflow:hidden scroll)
+
+    // ── Step 3: build result entry ────────────────────────────────────────
+    const dir    = hiddenDirection(rect);
+    const reason = buildReason(hiding.posData, dir);
+    const key    = href + '|' + reason;
+    if (seen.has(key)) return;
+    seen.add(key);
+
+    results.push({
+      href,
+      text:   (link.textContent || '').trim().replace(/\s+/g, ' ').slice(0, 120) || '(no text)',
+      reason,
+      source: hiding.source,
+      rel:    link.rel    || '',
+      target: link.target || '',
+    });
+  });
+
+  return results;
+}
+
+// Listen for messages from the popup
+chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
+  if (msg.action === 'scan') {
+    sendResponse({ links: findHiddenLinks() });
+  }
+  return true;
+});

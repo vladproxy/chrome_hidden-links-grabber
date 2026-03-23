@@ -1,0 +1,17 @@
+{
+  "manifest_version": 3,
+  "name": "Hidden Links Grabber",
+  "version": "1.0.0",
+  "description": "Detects links hidden via position:absolute with off-viewport CSS offsets",
+  "permissions": [
+    "activeTab",
+    "scripting"
+  ],
+  "host_permissions": [
+    "<all_urls>"
+  ],
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "Hidden Links Grabber"
+  }
+}
